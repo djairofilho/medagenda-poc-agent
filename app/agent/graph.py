@@ -41,7 +41,7 @@ class AgentState(TypedDict):
 
 def node_extract_fields(state: AgentState) -> AgentState:
     """
-    Extract fields from the last user message and detect intent.
+    Extract fields from the last user message using PydanticAI + regex merge.
     
     Args:
         state: Current agent state
@@ -51,23 +51,36 @@ def node_extract_fields(state: AgentState) -> AgentState:
     """
     last_message = get_last_user_message(state['messages'])
     
-    # Detect intent
-    intent = detect_intent(last_message)
-    state['intent'] = intent
+    # 1. Extract via PydanticAI (structured LLM extraction)
+    from app.agent.extractor import extract_with_pydantic_ai
+    from app.agent.extractor.merge import merge_extractions
     
-    # If out of scope or urgent, don't extract fields
-    if intent in ['out_of_scope', 'urgent']:
-        return state
+    llm_result = extract_with_pydantic_ai(last_message)
     
-    # Extract fields
-    extracted = extract_all_fields(last_message, state['extracted'])
-    state['extracted'] = extracted
+    # 2. Extract via regex (fallback/complement)
+    # IMPORTANT: Pass current extracted state to preserve data across messages
+    regex_result = extract_all_fields(last_message, state['extracted'])
     
-    # Calculate missing fields
-    missing = get_missing_fields(extracted)
+    # 3. Merge: regex wins phone/mode, LLM wins semantic fields
+    merged = merge_extractions(llm_result, regex_result)
+    
+    # 4. Update state with flags from LLM
+    if merged.out_of_scope:
+        state['intent'] = 'out_of_scope'
+    elif merged.urgent_flag:
+        state['intent'] = 'urgent'
+    else:
+        state['intent'] = 'schedule'
+    
+    # 5. Convert ExtractResult to dict for compatibility
+    state['extracted'] = merged.to_dict()
+    
+    # 6. Calculate missing fields
+    missing = get_missing_fields(state['extracted'])
     state['missing_fields'] = missing
     
     return state
+
 
 
 def node_ask_missing_or_confirm(state: AgentState) -> AgentState:

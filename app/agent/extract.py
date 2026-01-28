@@ -136,6 +136,13 @@ def extract_name(text: str) -> Optional[str]:
     """
     text = text.strip()
     
+    # Blacklist of common words that are not names
+    blacklist_words = {
+        'quero', 'marcar', 'consulta', 'preciso', 'gostaria', 'pode', 'ser',
+        'online', 'presencial', 'amanhã', 'hoje', 'segunda', 'terça', 'quarta',
+        'quinta', 'sexta', 'sábado', 'domingo', 'manhã', 'tarde', 'noite'
+    }
+    
     # Pattern 1: "me chamo [name]" or "sou o/a [name]" (case insensitive)
     patterns = [
         r'me chamo\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)+)',
@@ -151,6 +158,12 @@ def extract_name(text: str) -> Optional[str]:
             name = match.group(1).strip()
             # Capitalize properly
             name = ' '.join(word.capitalize() for word in name.split())
+            
+            # Check if any word is in blacklist
+            words_lower = [w.lower() for w in name.split()]
+            if any(word in blacklist_words for word in words_lower):
+                continue  # Skip this match
+            
             # Validate: must have at least 2 words and reasonable length
             if len(name.split()) >= 2 and 3 <= len(name) <= 50:
                 return name

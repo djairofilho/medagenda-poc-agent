@@ -4,3 +4,8 @@ pydantic
 langgraph
 langchain-core
 pytest
+pydantic-ai
+pydantic-ai-slim
+google-generativeai
+openai
+anthropic

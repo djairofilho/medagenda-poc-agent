@@ -28,10 +28,17 @@ O agente possui **barreiras rígidas** de segurança:
 - **Python 3.11+**
 - **FastAPI** - API REST
 - **LangGraph** - Orquestração do fluxo conversacional
+- **PydanticAI** - Extração estruturada com LLM
 - **Pydantic** - Validação de dados
 - **SQLite** - Persistência (sem ORM)
 - **Uvicorn** - Servidor ASGI
 - **Pytest** - Testes automatizados
+
+### Providers LLM Suportados
+- **Gemini** (Google) - Recomendado
+- **OpenAI** (GPT-4o-mini)
+- **Anthropic** (Claude Haiku)
+- **Fallback** (Regex puro)
 
 ## 📁 Estrutura do Projeto
 
@@ -39,20 +46,29 @@ O agente possui **barreiras rígidas** de segurança:
 Bot/
 ├── app/
 │   ├── agent/
+│   │   ├── extractor/        # PydanticAI extraction (NEW)
+│   │   │   ├── schema.py     # ExtractResult (source of truth)
+│   │   │   ├── prompts.py    # System instructions
+│   │   │   ├── factory.py    # Multi-provider agent creation
+│   │   │   ├── adapter.py    # Main extraction interface
+│   │   │   └── merge.py      # LLM + regex merge logic
 │   │   ├── graph.py          # LangGraph state machine
-│   │   ├── extract.py        # Extração de campos (regex)
+│   │   ├── extract.py        # Extração regex (fallback)
 │   │   ├── prompts.py        # Mensagens padrão
 │   │   └── tools.py          # Utilitários
 │   ├── db/
 │   │   └── sqlite.py         # Operações de banco
 │   ├── models/
 │   │   └── schemas.py        # Schemas Pydantic
-│   ├── config.py             # Configurações
+│   ├── config.py             # Configurações + LLM providers
 │   └── main.py               # FastAPI app
+├── docs/                     # Documentação completa
+│   ├── PYDANTIC_AI.md        # Integração PydanticAI (NEW)
+│   └── ...
 ├── tests/
-│   ├── conftest.py           # Fixtures pytest
-│   ├── test_extract.py       # Testes de extração
-│   └── test_agent_flow.py    # Testes de fluxo
+│   ├── test_extractor_*.py   # Testes PydanticAI (NEW)
+│   └── ...
+├── .env.example              # Exemplo de variáveis (NEW)
 ├── streamlit_app.py          # Interface web Streamlit
 ├── requirements.txt
 └── README.md
@@ -75,7 +91,28 @@ pip install -r requirements.txt
 pip install streamlit  # Para a interface web
 ```
 
-### 3. Rodar a API (Backend)
+### 3. Configurar LLM Provider (Opcional)
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```bash
+# Copiar exemplo
+cp .env.example .env
+
+# Editar e adicionar sua API key
+# LLM_PROVIDER=gemini
+# GOOGLE_API_KEY=your_key_here
+```
+
+**Providers disponíveis:**
+- `gemini` - Google Gemini (recomendado)
+- `openai` - OpenAI GPT-4o-mini
+- `anthropic` - Anthropic Claude Haiku
+- `fallback` - Regex puro (sem LLM, grátis)
+
+**Sem configuração:** O sistema usa fallback (regex) automaticamente.
+
+### 4. Rodar a API (Backend)
 
 Em um terminal, execute:
 

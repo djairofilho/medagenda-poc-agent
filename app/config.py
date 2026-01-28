@@ -18,3 +18,18 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 API_TITLE = "medAgenda API"
 API_VERSION = "1.0.0"
 API_DESCRIPTION = "Appointment scheduling agent - POC"
+
+# LLM Provider configuration
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "fallback")  # gemini|openai|anthropic|fallback
+
+# Gemini
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
+# OpenAI
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+# Anthropic
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")

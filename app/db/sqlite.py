@@ -1,6 +1,6 @@
 """SQLite database operations for medAgenda"""
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -82,7 +82,7 @@ def insert_appointment(
     conn = get_connection()
     cursor = conn.cursor()
     
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(timezone.utc).isoformat()
     
     cursor.execute("""
         INSERT INTO appointments (
