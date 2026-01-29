@@ -135,6 +135,22 @@ streamlit run streamlit_app.py
 
 A interface web abrirá automaticamente em: `http://localhost:8501`
 
+### 5. Visualizar Diagrama do LangGraph (Opcional)
+
+Para gerar o diagrama visual do fluxo do agente:
+
+```bash
+python generate_graph_diagram.py
+```
+
+Isso criará:
+- `langgraph_diagram.mmd` - Código Mermaid
+- `langgraph_diagram.png` - Imagem do diagrama
+
+![LangGraph Diagram](langgraph_diagram.png)
+
+**Documentação:** [docs/LANGGRAPH_DIAGRAM.md](docs/LANGGRAPH_DIAGRAM.md)
+
 ### 🎯 Opções de Uso
 
 Você pode usar o medAgenda de 3 formas:

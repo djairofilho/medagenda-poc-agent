@@ -48,11 +48,13 @@ def node_extract_fields(state: AgentState) -> AgentState:
     """
     Extract fields from the last user message using PydanticAI + regex merge.
     
+    This runs ONLY for 'schedule' intent after intent identification.
+    
     Args:
         state: Current agent state
     
     Returns:
-        Updated state with extracted fields and intent
+        Updated state with extracted fields
     """
     last_message = get_last_user_message(state['messages'])
     
@@ -69,22 +71,46 @@ def node_extract_fields(state: AgentState) -> AgentState:
     # 3. Merge: regex wins phone/mode, LLM wins semantic fields
     merged = merge_extractions(llm_result, regex_result)
     
-    # 4. Update state with flags from LLM
-    if merged.out_of_scope:
-        state['intent'] = 'out_of_scope'
-    elif merged.urgent_flag:
-        state['intent'] = 'urgent'
-    else:
-        state['intent'] = 'schedule'
-    
-    # 5. Convert ExtractResult to dict for compatibility
+    # 4. Convert ExtractResult to dict for compatibility
     state['extracted'] = merged.to_dict()
     
-    # 6. Calculate missing fields
+    # 5. Calculate missing fields
     missing = get_missing_fields(state['extracted'])
     state['missing_fields'] = missing
     
     return state
+
+
+def node_identify_intent(state: AgentState) -> AgentState:
+    """
+    Identify user intent based ONLY on message content (no extraction needed).
+    
+    This runs FIRST to determine routing without expensive extraction.
+    
+    Intents:
+    - info: User asking for clinic information
+    - urgent: Emergency/urgent symptoms detected
+    - out_of_scope: Medical advice request
+    - schedule: Normal appointment scheduling (default)
+    
+    Args:
+        state: Current agent state
+    
+    Returns:
+        Updated state with intent set
+    """
+    last_message = get_last_user_message(state['messages'])
+    
+    # Use regex-based detection (fast, no LLM needed)
+    from app.agent.extract import detect_intent
+    detected_intent = detect_intent(last_message)
+    
+    state['intent'] = detected_intent
+    
+    print(f"[Intent] {detected_intent} (detected from message)")
+    
+    return state
+
 
 
 def node_check_onboarding(state: AgentState) -> AgentState:
@@ -210,11 +236,50 @@ def node_provide_clinic_info(state: AgentState) -> AgentState:
     return state
 
 
+def node_handle_urgent(state: AgentState) -> AgentState:
+    """
+    Handle urgent intent - provide safety message.
+    
+    Args:
+        state: Current agent state
+    
+    Returns:
+        Updated state with urgent response
+    """
+    state['last_bot_message'] = URGENT_NEUTRAL
+    state['intent'] = 'schedule'  # Reset to allow scheduling after warning
+    
+    print(f"[Urgent] Provided safety warning")
+    
+    return state
+
+
+def node_handle_out_of_scope(state: AgentState) -> AgentState:
+    """
+    Handle out of scope intent - redirect to scheduling.
+    
+    Args:
+        state: Current agent state
+    
+    Returns:
+        Updated state with out of scope response
+    """
+    state['last_bot_message'] = OUT_OF_SCOPE
+    state['intent'] = 'schedule'  # Reset to allow scheduling
+    
+    print(f"[Out of Scope] Redirected to scheduling")
+    
+    return state
+
+
 
 def node_ask_missing_or_confirm(state: AgentState) -> AgentState:
     """
     Ask for missing fields or generate confirmation message.
     Handles onboarding (name/phone) separately from appointment scheduling.
+    
+    Note: urgent and out_of_scope intents are handled by dedicated nodes
+    and should not reach this node.
     
     Args:
         state: Current agent state
@@ -222,18 +287,6 @@ def node_ask_missing_or_confirm(state: AgentState) -> AgentState:
     Returns:
         Updated state with bot response
     """
-    # Handle out of scope intent
-    if state['intent'] == 'out_of_scope':
-        state['last_bot_message'] = OUT_OF_SCOPE
-        state['intent'] = 'schedule'  # Reset intent
-        return state
-    
-    # Handle urgent intent
-    if state['intent'] == 'urgent':
-        state['last_bot_message'] = URGENT_NEUTRAL
-        state['intent'] = 'schedule'  # Reset intent
-        return state
-    
     # ========================================================================
     # ONBOARDING FLOW (if not onboarded)
     # ========================================================================
@@ -386,35 +439,51 @@ def build_graph() -> StateGraph:
     
     # Add nodes
     workflow.add_node("extract", node_extract_fields)
-    workflow.add_node("check_onboarding", node_check_onboarding)
+    workflow.add_node("identify_intent", node_identify_intent)
     workflow.add_node("provide_info", node_provide_clinic_info)
+    workflow.add_node("handle_urgent", node_handle_urgent)
+    workflow.add_node("handle_out_of_scope", node_handle_out_of_scope)
+    workflow.add_node("check_onboarding", node_check_onboarding)
     workflow.add_node("ask_or_confirm", node_ask_missing_or_confirm)
     workflow.add_node("handle_confirmation", node_handle_confirmation_and_save)
     
-    # Set entry point
-    workflow.set_entry_point("extract")
+    # Set entry point - INTENT FIRST!
+    workflow.set_entry_point("identify_intent")
     
-    # Conditional routing after extraction
-    def route_after_extract(state: AgentState) -> str:
-        # If user is asking for clinic info, go to info node
-        if state['intent'] == 'info':
+    # Conditional routing after intent identification
+    def route_by_intent(state: AgentState) -> str:
+        """Route based on identified intent."""
+        intent = state.get('intent', 'schedule')
+        
+        if intent == 'info':
             return "provide_info"
-        # Otherwise, check onboarding
-        return "check_onboarding"
+        elif intent == 'urgent':
+            return "handle_urgent"
+        elif intent == 'out_of_scope':
+            return "handle_out_of_scope"
+        else:  # schedule
+            return "extract"
     
     workflow.add_conditional_edges(
-        "extract",
-        route_after_extract,
+        "identify_intent",
+        route_by_intent,
         {
             "provide_info": "provide_info",
-            "check_onboarding": "check_onboarding"
+            "handle_urgent": "handle_urgent",
+            "handle_out_of_scope": "handle_out_of_scope",
+            "extract": "extract"  # Only extract if scheduling
         }
     )
     
-    # After providing info, end (user can start new conversation for scheduling)
+    # After providing info, end
     workflow.add_edge("provide_info", END)
     
-    # Normal flow: check_onboarding -> ask_or_confirm
+    # After urgent/out_of_scope, end
+    workflow.add_edge("handle_urgent", END)
+    workflow.add_edge("handle_out_of_scope", END)
+    
+    # Scheduling flow: extract -> check_onboarding -> ask_or_confirm
+    workflow.add_edge("extract", "check_onboarding")
     workflow.add_edge("check_onboarding", "ask_or_confirm")
     
     # Conditional edge from ask_or_confirm

@@ -11,6 +11,7 @@ Bem-vindo à documentação completa do **MedAgenda Bot** - um agente conversaci
 ### 🔧 Componentes Técnicos
 - **[AGENT_FLOW.md](./AGENT_FLOW.md)** - Fluxo do agente LangGraph e máquina de estados
 - **[LANGGRAPH_DIAGRAM.md](./LANGGRAPH_DIAGRAM.md)** - Diagrama visual do grafo (Mermaid) 🆕
+- **[INTENT_IDENTIFICATION.md](./INTENT_IDENTIFICATION.md)** - Sistema de identificação de intenção 🆕
 - **[PYDANTIC_AI.md](./PYDANTIC_AI.md)** - Integração PydanticAI para extração estruturada 🆕
 - **[EXTRACTION.md](./EXTRACTION.md)** - Sistema de extração de campos (regex/heurísticas)
 - **[DATABASE.md](./DATABASE.md)** - Esquema do banco de dados e operações

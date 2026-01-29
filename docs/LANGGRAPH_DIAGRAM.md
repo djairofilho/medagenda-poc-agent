@@ -101,8 +101,8 @@ python generate_graph_diagram.py
 ```
 
 Isso irá:
-1. ✅ Gerar `docs/langgraph_diagram.mmd` (código Mermaid)
-2. ✅ Gerar `docs/langgraph_diagram.png` (imagem PNG)
+1. ✅ Gerar `langgraph_diagram.mmd` (código Mermaid)
+2. ✅ Gerar `langgraph_diagram.png` (imagem PNG)
 
 ### Alternativas
 
@@ -114,7 +114,7 @@ Isso irá:
 **Opção 2: Mermaid CLI (local)**
 ```bash
 npm install -g @mermaid-js/mermaid-cli
-mmdc -i docs/langgraph_diagram.mmd -o docs/langgraph_diagram.png
+mmdc -i langgraph_diagram.mmd -o langgraph_diagram.png
 ```
 
 ---

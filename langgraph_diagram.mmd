@@ -6,18 +6,26 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	extract(extract)
-	check_onboarding(check_onboarding)
+	identify_intent(identify_intent)
 	provide_info(provide_info)
+	handle_urgent(handle_urgent)
+	handle_out_of_scope(handle_out_of_scope)
+	check_onboarding(check_onboarding)
 	ask_or_confirm(ask_or_confirm)
 	handle_confirmation(handle_confirmation)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> extract;
+	__start__ --> identify_intent;
 	ask_or_confirm -.-> __end__;
 	ask_or_confirm -.-> handle_confirmation;
 	check_onboarding --> ask_or_confirm;
-	extract -.-> check_onboarding;
-	extract -.-> provide_info;
+	extract --> check_onboarding;
+	identify_intent -.-> extract;
+	identify_intent -.-> handle_out_of_scope;
+	identify_intent -.-> handle_urgent;
+	identify_intent -.-> provide_info;
 	handle_confirmation --> __end__;
+	handle_out_of_scope --> __end__;
+	handle_urgent --> __end__;
 	provide_info --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
