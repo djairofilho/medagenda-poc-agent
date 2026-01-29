@@ -272,7 +272,7 @@ if user_input:
                     "message": user_input,
                     "channel": "streamlit"
                 },
-                timeout=10
+                timeout=60
             )
         
         if response.status_code == 200:
@@ -288,14 +288,27 @@ if user_input:
             
             st.rerun()
         else:
-            st.error(f"Erro na API: {response.status_code}")
+            # Try to extract error message from API response
+            try:
+                error_data = response.json()
+                error_message = error_data.get('detail', f"Erro {response.status_code}")
+            except:
+                error_message = f"Erro na API: {response.status_code}"
+            
+            # Show appropriate icon based on status code
+            if response.status_code == 429:
+                st.warning(f"⏳ {error_message}")
+            elif response.status_code in [503, 504]:
+                st.warning(f"⚠️ {error_message}")
+            else:
+                st.error(f"❌ {error_message}")
             
     except requests.exceptions.Timeout:
-        st.error("⏱️ Timeout - A API demorou muito para responder")
+        st.error("⏱️ Timeout - A API demorou muito para responder. Tente novamente em alguns segundos.")
     except requests.exceptions.ConnectionError:
         st.error("🔌 Erro de conexão - Verifique se a API está rodando")
     except Exception as e:
-        st.error(f"❌ Erro: {str(e)}")
+        st.error(f"❌ Erro inesperado: {str(e)}")
 
 # Initial greeting if no messages
 if len(st.session_state.messages) == 0:

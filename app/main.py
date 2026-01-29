@@ -1,4 +1,5 @@
 """FastAPI application for medAgenda appointment scheduling agent"""
+import logging
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -18,6 +19,10 @@ from app.db.sqlite import (
     list_appointments,
     count_appointments
 )
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -93,7 +98,7 @@ async def chat(
             response.state_debug = {
                 "extracted": state['extracted'],
                 "missing_fields": state['missing_fields'],
-                "awaiting_confirmation": state['awaiting_confirmation'],
+                "awaiting_confirmation": state.get('waiting_confirmation'),
                 "appointment_id": state['appointment_id'],
                 "intent": state['intent']
             }
@@ -101,7 +106,31 @@ async def chat(
         return response
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing message: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Error processing message for session {request.session_id}: {error_msg}")
+        
+        # Check for specific error types
+        if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg:
+            raise HTTPException(
+                status_code=429,
+                detail="O serviço está temporariamente sobrecarregado. Por favor, aguarde alguns segundos e tente novamente."
+            )
+        elif "NOT_FOUND" in error_msg or "404" in error_msg:
+            raise HTTPException(
+                status_code=503,
+                detail="Serviço de IA temporariamente indisponível. Por favor, tente novamente em instantes."
+            )
+        elif "timeout" in error_msg.lower():
+            raise HTTPException(
+                status_code=504,
+                detail="A requisição demorou muito para processar. Por favor, tente novamente."
+            )
+        else:
+            # Generic error - don't expose internal details to user
+            raise HTTPException(
+                status_code=500,
+                detail="Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente."
+            )
 
 
 @app.get("/appointments", response_model=AppointmentListResponse)

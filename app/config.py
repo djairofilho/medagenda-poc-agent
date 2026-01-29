@@ -5,6 +5,10 @@ from pathlib import Path
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env file
+from dotenv import load_dotenv
+load_dotenv(BASE_DIR / ".env")
+
 # Database
 DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "medagenda.db"))
 
