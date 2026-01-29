@@ -3,7 +3,9 @@
 # Greeting message
 GREETING = """Oi! Eu sou o medAgenda 😊
 
-Posso te ajudar a marcar uma consulta. Você já sabe a especialidade que precisa?"""
+Vou te ajudar a marcar uma consulta médica.
+
+Qual é o seu nome completo?"""
 
 # Out of scope response (medical advice requests)
 OUT_OF_SCOPE = """Eu só ajudo a marcar consulta. Você quer agendar com qual especialidade?"""

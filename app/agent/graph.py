@@ -37,6 +37,11 @@ class AgentState(TypedDict):
     appointment_id: Optional[int]
     channel: str
     intent: str  # 'schedule', 'out_of_scope', 'urgent'
+    
+    # Onboarding fields
+    patient_id: Optional[int]  # ID if patient exists
+    is_onboarded: bool  # True if patient already registered
+    onboarding_step: str  # 'name', 'phone', 'complete'
 
 
 def node_extract_fields(state: AgentState) -> AgentState:
@@ -82,10 +87,62 @@ def node_extract_fields(state: AgentState) -> AgentState:
     return state
 
 
+def node_check_onboarding(state: AgentState) -> AgentState:
+    """
+    Check if user is already onboarded (registered).
+    If phone is provided, check database for existing patient.
+    
+    Args:
+        state: Current agent state
+    
+    Returns:
+        Updated state with onboarding status
+    """
+    from app.db.sqlite import get_patient_by_phone
+    
+    phone = state['extracted'].get('phone')
+    
+    # If we have a phone, check if patient exists
+    if phone:
+        patient = get_patient_by_phone(phone)
+        
+        if patient:
+            # Patient exists! Load their data
+            state['is_onboarded'] = True
+            state['patient_id'] = patient['id']
+            state['onboarding_step'] = 'complete'
+            
+            # Fill name from database if not provided in message
+            if not state['extracted'].get('name'):
+                state['extracted']['name'] = patient['name']
+                # Recalculate missing fields
+                missing = get_missing_fields(state['extracted'])
+                state['missing_fields'] = missing
+            
+            print(f"[Onboarding] Patient found: {patient['name']} ({phone})")
+        else:
+            # New patient - needs onboarding
+            state['is_onboarded'] = False
+            state['patient_id'] = None
+            state['onboarding_step'] = 'name' if not state['extracted'].get('name') else 'phone'
+            
+            print(f"[Onboarding] New patient with phone: {phone}")
+    else:
+        # No phone yet - definitely needs onboarding
+        state['is_onboarded'] = False
+        state['patient_id'] = None
+        state['onboarding_step'] = 'name' if not state['extracted'].get('name') else 'phone'
+        
+        print(f"[Onboarding] No phone provided, starting onboarding")
+    
+    return state
+
+
 
 def node_ask_missing_or_confirm(state: AgentState) -> AgentState:
     """
     Ask for missing fields or generate confirmation message.
+    Handles onboarding (name/phone) separately from appointment scheduling.
     
     Args:
         state: Current agent state
@@ -105,25 +162,74 @@ def node_ask_missing_or_confirm(state: AgentState) -> AgentState:
         state['intent'] = 'schedule'  # Reset intent
         return state
     
-    # If there are missing fields, ask for them
-    if state['missing_fields']:
-        missing = state['missing_fields']
+    # ========================================================================
+    # ONBOARDING FLOW (if not onboarded)
+    # ========================================================================
+    if not state.get('is_onboarded', False):
+        # Ask for name first
+        if not state['extracted'].get('name'):
+            state['last_bot_message'] = "Qual é o seu nome completo?"
+            return state
         
-        # If only one field missing, ask directly
-        if len(missing) == 1:
-            field = missing[0]
-            state['last_bot_message'] = FIELD_REQUESTS[field]
-        else:
-            # Batch request for multiple fields
-            state['last_bot_message'] = format_batched_request(missing)
+        # Then ask for phone
+        if not state['extracted'].get('phone'):
+            state['last_bot_message'] = "Qual é o seu WhatsApp ou telefone?"
+            return state
         
+        # Both name and phone collected - save patient
+        from app.db.sqlite import create_patient
+        
+        patient_id = create_patient(
+            name=state['extracted']['name'],
+            phone=state['extracted']['phone'],
+            channel=state['channel']
+        )
+        
+        state['patient_id'] = patient_id
+        state['is_onboarded'] = True
+        state['onboarding_step'] = 'complete'
+        
+        print(f"[Onboarding] Patient created: {state['extracted']['name']} (ID: {patient_id})")
+        
+        # Welcome message and proceed to appointment
+        state['last_bot_message'] = (
+            f"Prazer em conhecê-lo(a), {state['extracted']['name']}! 😊\n\n"
+            "Agora vamos agendar sua consulta.\n\n"
+            "Qual especialidade você precisa? (ex: dermatologista, cardiologista, clínico geral)"
+        )
         return state
+    
+    # ========================================================================
+    # APPOINTMENT SCHEDULING FLOW (onboarded users)
+    # ========================================================================
+    
+    # Define appointment-specific required fields (name/phone already have)
+    appointment_fields = ['specialty', 'preferred_datetime', 'mode']
+    appointment_missing = [f for f in appointment_fields if not state['extracted'].get(f)]
+    
+    # If there are missing appointment fields, ask for them
+    if appointment_missing:
+        # Ask for specialty first
+        if 'specialty' in appointment_missing:
+            state['last_bot_message'] = "Qual especialidade você precisa? (ex: dermatologista, cardiologista, clínico geral)"
+            return state
+        
+        # Then ask for datetime
+        if 'preferred_datetime' in appointment_missing:
+            state['last_bot_message'] = "Qual seria o melhor dia e horário para você?"
+            return state
+        
+        # Then ask for mode
+        if 'mode' in appointment_missing:
+            state['last_bot_message'] = "Você prefere atendimento presencial ou online?"
+            return state
     
     # All fields collected, generate confirmation
     state['awaiting_confirmation'] = True
     state['last_bot_message'] = format_confirmation(state['extracted'])
     
     return state
+
 
 
 def node_handle_confirmation_and_save(state: AgentState) -> AgentState:
@@ -208,14 +314,16 @@ def build_graph() -> StateGraph:
     
     # Add nodes
     workflow.add_node("extract", node_extract_fields)
+    workflow.add_node("check_onboarding", node_check_onboarding)
     workflow.add_node("ask_or_confirm", node_ask_missing_or_confirm)
     workflow.add_node("handle_confirmation", node_handle_confirmation_and_save)
     
     # Set entry point
     workflow.set_entry_point("extract")
     
-    # Simple linear flow with conditional routing
-    workflow.add_edge("extract", "ask_or_confirm")
+    # Flow: extract -> check_onboarding -> ask_or_confirm
+    workflow.add_edge("extract", "check_onboarding")
+    workflow.add_edge("check_onboarding", "ask_or_confirm")
     
     # Conditional edge from ask_or_confirm
     def route_from_ask(state: AgentState) -> str:
@@ -262,7 +370,11 @@ def get_or_create_session(session_id: str, channel: str = "unknown") -> AgentSta
             'last_bot_message': GREETING,
             'appointment_id': None,
             'channel': channel,
-            'intent': 'schedule'
+            'intent': 'schedule',
+            # Onboarding fields
+            'patient_id': None,
+            'is_onboarded': False,
+            'onboarding_step': 'name'
         }
     
     return _sessions[session_id]

@@ -51,6 +51,9 @@ def init_db() -> None:
     
     conn.commit()
     conn.close()
+    
+    # Initialize patients table
+    init_patients_table()
 
 
 def insert_appointment(
@@ -160,3 +163,123 @@ def count_appointments() -> int:
     conn.close()
     
     return result["count"] if result else 0
+
+
+# ============================================================================
+# PATIENT MANAGEMENT (Onboarding)
+# ============================================================================
+
+def init_patients_table() -> None:
+    """Initialize the patients table for onboarding."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Create patients table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS patients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL UNIQUE,
+            channel TEXT NOT NULL DEFAULT 'unknown'
+        )
+    """)
+    
+    # Create index on phone for fast lookup
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_patients_phone 
+        ON patients(phone)
+    """)
+    
+    conn.commit()
+    conn.close()
+
+
+def get_patient_by_phone(phone: str) -> Optional[Dict[str, Any]]:
+    """
+    Get patient by phone number.
+    
+    Args:
+        phone: Patient's phone number
+    
+    Returns:
+        Patient dictionary or None if not found
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM patients WHERE phone = ?
+    """, (phone,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return dict(row)
+    return None
+
+
+def create_patient(
+    name: str,
+    phone: str,
+    channel: str = "unknown"
+) -> int:
+    """
+    Create a new patient (onboarding).
+    
+    Args:
+        name: Patient's full name
+        phone: Patient's phone number
+        channel: Communication channel
+    
+    Returns:
+        The ID of the created patient
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute("""
+        INSERT INTO patients (created_at, name, phone, channel)
+        VALUES (?, ?, ?, ?)
+    """, (created_at, name, phone, channel))
+    
+    patient_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return patient_id
+
+
+def update_patient(
+    phone: str,
+    name: Optional[str] = None
+) -> bool:
+    """
+    Update patient information.
+    
+    Args:
+        phone: Patient's phone number
+        name: New name (if provided)
+    
+    Returns:
+        True if updated, False if patient not found
+    """
+    patient = get_patient_by_phone(phone)
+    if not patient:
+        return False
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if name:
+        cursor.execute("""
+            UPDATE patients SET name = ? WHERE phone = ?
+        """, (name, phone))
+    
+    conn.commit()
+    conn.close()
+    
+    return True
