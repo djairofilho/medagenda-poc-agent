@@ -116,7 +116,7 @@ def process_message(session_id: str, user_message: str, channel: str = "web") ->
     # Add User Message to History
     # NOTE: AgentState uses add_messages (append), but our local dict is just a list.
     # LangGraph handles 'messages' list operations if managed by LangGraph memory,
-    # but here we are managing _sessions manualy. 
+    # but here we are managing _sessions manually. 
     # We manually append to be safe before invoking.
     state_schema["messages"].append(HumanMessage(content=user_message))
     
