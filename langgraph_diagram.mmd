@@ -1,0 +1,24 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	extract(extract)
+	check_onboarding(check_onboarding)
+	provide_info(provide_info)
+	ask_or_confirm(ask_or_confirm)
+	handle_confirmation(handle_confirmation)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> extract;
+	ask_or_confirm -.-> __end__;
+	ask_or_confirm -.-> handle_confirmation;
+	check_onboarding --> ask_or_confirm;
+	extract -.-> check_onboarding;
+	extract -.-> provide_info;
+	handle_confirmation --> __end__;
+	provide_info --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

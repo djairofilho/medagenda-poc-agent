@@ -138,6 +138,78 @@ def node_check_onboarding(state: AgentState) -> AgentState:
     return state
 
 
+def node_provide_clinic_info(state: AgentState) -> AgentState:
+    """
+    Provide clinic information based on user query.
+    
+    Args:
+        state: Current agent state
+    
+    Returns:
+        Updated state with clinic information
+    """
+    from app.db.sqlite import get_all_clinic_info
+    
+    last_message = get_last_user_message(state['messages'])
+    text_lower = last_message.lower()
+    
+    # Get all clinic info
+    clinic_info = get_all_clinic_info()
+    
+    # Determine what specific info user is asking for
+    response_parts = []
+    
+    # Address
+    if any(word in text_lower for word in ['endereço', 'endereco', 'onde', 'localização', 'localizacao', 'chegar']):
+        response_parts.append(f"📍 **Endereço:**\n{clinic_info.get('address', 'Não disponível')}")
+    
+    # Hours
+    if any(word in text_lower for word in ['horário', 'horario', 'funciona', 'abre', 'fecha', 'atendimento']):
+        response_parts.append(f"🕐 **Horário de Funcionamento:**\n{clinic_info.get('hours', 'Não disponível')}")
+    
+    # Services/Specialties
+    if any(word in text_lower for word in ['serviços', 'servicos', 'especialidades', 'atende']):
+        response_parts.append(f"🏥 **Serviços:**\n{clinic_info.get('services', 'Não disponível')}")
+    
+    # Insurance
+    if any(word in text_lower for word in ['convênio', 'convenio', 'plano']):
+        response_parts.append(f"💳 **Convênios:**\n{clinic_info.get('insurance', 'Não disponível')}")
+    
+    # Parking
+    if 'estacionamento' in text_lower:
+        response_parts.append(f"🚗 **Estacionamento:**\n{clinic_info.get('parking', 'Não disponível')}")
+    
+    # Accessibility
+    if 'acessibilidade' in text_lower or 'cadeirante' in text_lower:
+        response_parts.append(f"♿ **Acessibilidade:**\n{clinic_info.get('accessibility', 'Não disponível')}")
+    
+    # Contact
+    if any(word in text_lower for word in ['telefone', 'contato', 'whatsapp']):
+        phone = clinic_info.get('phone', '')
+        whatsapp = clinic_info.get('whatsapp', '')
+        response_parts.append(f"📞 **Contato:**\nTelefone: {phone}\nWhatsApp: {whatsapp}")
+    
+    # If no specific info detected, provide general info
+    if not response_parts:
+        name = clinic_info.get('name', 'Clínica MedAgenda')
+        response_parts = [
+            f"**{name}**\n",
+            f"📍 {clinic_info.get('address', 'Não disponível')}",
+            f"🕐 {clinic_info.get('hours', 'Não disponível')}",
+            f"📞 Telefone: {clinic_info.get('phone', 'Não disponível')}",
+            f"📱 WhatsApp: {clinic_info.get('whatsapp', 'Não disponível')}"
+        ]
+    
+    # Build response
+    info_response = "\n\n".join(response_parts)
+    info_response += "\n\n✨ Posso te ajudar a agendar uma consulta?"
+    
+    state['last_bot_message'] = info_response
+    state['intent'] = 'schedule'  # Reset to schedule after providing info
+    
+    return state
+
+
 
 def node_ask_missing_or_confirm(state: AgentState) -> AgentState:
     """
@@ -315,14 +387,34 @@ def build_graph() -> StateGraph:
     # Add nodes
     workflow.add_node("extract", node_extract_fields)
     workflow.add_node("check_onboarding", node_check_onboarding)
+    workflow.add_node("provide_info", node_provide_clinic_info)
     workflow.add_node("ask_or_confirm", node_ask_missing_or_confirm)
     workflow.add_node("handle_confirmation", node_handle_confirmation_and_save)
     
     # Set entry point
     workflow.set_entry_point("extract")
     
-    # Flow: extract -> check_onboarding -> ask_or_confirm
-    workflow.add_edge("extract", "check_onboarding")
+    # Conditional routing after extraction
+    def route_after_extract(state: AgentState) -> str:
+        # If user is asking for clinic info, go to info node
+        if state['intent'] == 'info':
+            return "provide_info"
+        # Otherwise, check onboarding
+        return "check_onboarding"
+    
+    workflow.add_conditional_edges(
+        "extract",
+        route_after_extract,
+        {
+            "provide_info": "provide_info",
+            "check_onboarding": "check_onboarding"
+        }
+    )
+    
+    # After providing info, end (user can start new conversation for scheduling)
+    workflow.add_edge("provide_info", END)
+    
+    # Normal flow: check_onboarding -> ask_or_confirm
     workflow.add_edge("check_onboarding", "ask_or_confirm")
     
     # Conditional edge from ask_or_confirm

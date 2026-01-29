@@ -244,17 +244,30 @@ def extract_reason(text: str) -> Optional[str]:
 
 def detect_intent(text: str) -> str:
     """
-    Detect user intent to identify out-of-scope requests.
+    Detect user intent to identify out-of-scope requests or info requests.
     
     Args:
         text: Input text
     
     Returns:
-        'schedule' (normal), 'out_of_scope' (medical advice), or 'urgent' (emergency)
+        'schedule' (normal), 'out_of_scope' (medical advice), 'urgent' (emergency), or 'info' (clinic information)
     """
     text_lower = text.lower()
     
-    # Check for urgent keywords first
+    # Check for info requests first (most specific)
+    info_keywords = [
+        'endereço', 'endereco', 'onde fica', 'localização', 'localizacao',
+        'horário', 'horario', 'funciona', 'abre', 'fecha', 'atendimento',
+        'serviços', 'servicos', 'especialidades', 'convênio', 'convenio',
+        'estacionamento', 'acessibilidade', 'telefone da clínica', 'contato',
+        'como chegar', 'informações', 'informacoes'
+    ]
+    
+    for keyword in info_keywords:
+        if keyword in text_lower:
+            return 'info'
+    
+    # Check for urgent keywords
     for keyword in URGENT_KEYWORDS:
         if keyword in text_lower:
             return 'urgent'
