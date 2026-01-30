@@ -24,6 +24,41 @@ def validate_phone(phone: str) -> bool:
     return 10 <= len(clean_phone) <= 13
 
 
+def validate_datetime_string(datetime_str: str) -> tuple[bool, str, datetime | None]:
+    """
+    Valida string de data/hora e retorna resultado.
+    
+    Args:
+        datetime_str: String contendo data/hora
+    
+    Returns:
+        Tupla (is_valid, message, datetime_obj)
+    """
+    from app.agent.datetime_parser import extract_datetime_info
+    
+    result = extract_datetime_info(datetime_str)
+    
+    return (
+        result["is_valid"],
+        result["validation_message"],
+        result["datetime_obj"]
+    )
+
+
+def parse_user_datetime(user_input: str) -> dict:
+    """
+    Parse entrada do usuário e retorna informações completas de data/hora.
+    
+    Args:
+        user_input: Texto do usuário
+    
+    Returns:
+        Dict com datetime_obj, formatted, is_valid, confidence, etc.
+    """
+    from app.agent.datetime_parser import extract_datetime_info
+    return extract_datetime_info(user_input)
+
+
 from app.config import LLM_PROVIDER, GOOGLE_API_KEY, OPENAI_API_KEY, GEMINI_MODEL, OPENAI_MODEL
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
