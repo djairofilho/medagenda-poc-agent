@@ -129,6 +129,7 @@ Acesse a documentação interativa em: `http://localhost:8000/docs`
 **Em outro terminal**, ative o ambiente virtual e execute:
 
 ```bash
+
 .\venv\Scripts\activate
 streamlit run streamlit_app.py
 ```

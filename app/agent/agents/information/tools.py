@@ -31,6 +31,6 @@ def load_clinic_info() -> str:
         
     # Add static info (could be moved to json too)
     info_text += "\nENDEREÇO: Av. Paulista, 1000 - São Paulo/SP\n"
-    info_text += "HORÁRIO: Seg-Sex 08h às 18h.\n"
+    info_text += "HORÁRIO: Seg-Sex 08h às 20h.\n"
     
     return info_text

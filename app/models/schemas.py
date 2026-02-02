@@ -1,5 +1,5 @@
 """Pydantic schemas for request/response validation"""
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from pydantic import BaseModel, Field
 
 
@@ -34,10 +34,49 @@ class AppointmentResponse(BaseModel):
 class AppointmentListResponse(BaseModel):
     """Response schema for list of appointments."""
     total: int
-    appointments: list[AppointmentResponse]
+    appointments: List[AppointmentResponse]
 
 
 class SessionResetResponse(BaseModel):
     """Response schema for session reset."""
     session_id: str
+    message: str
+
+
+# --- Availability Slots ---
+
+class SlotBase(BaseModel):
+    """Base schema for a slot."""
+    specialty: str
+    slot_datetime: str
+
+
+class SlotCreateRequest(BaseModel):
+    """Request schema for bulk slot creation."""
+    slots: List[SlotBase]
+
+
+class SlotResponse(SlotBase):
+    """Response schema for a slot."""
+    id: int
+    is_available: bool
+    created_at: str
+
+
+class SlotListResponse(BaseModel):
+    """Response schema for list of slots."""
+    total: int
+    slots: List[SlotResponse]
+
+
+# --- Bulk Actions ---
+
+class BulkDeleteRequest(BaseModel):
+    """Request schema for bulk deletion of items by ID."""
+    ids: List[int]
+
+
+class BulkActionResponse(BaseModel):
+    """Response schema for bulk operations."""
+    affected_count: int
     message: str

@@ -28,7 +28,7 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "fallback")  # gemini|openai|anthropic|
 
 # Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 # OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

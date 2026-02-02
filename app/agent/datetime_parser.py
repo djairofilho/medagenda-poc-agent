@@ -315,8 +315,8 @@ def validate_datetime(dt: datetime, allow_weekends: bool = False) -> ValidationR
             suggestions=[]
         )
     
-    # Verificar horário comercial (7h às 20h)
-    if dt.hour < 7 or dt.hour >= 20:
+    # Verificar horário comercial (8h às 20h)
+    if dt.hour < 8 or dt.hour >= 20:
         suggestions = [
             f"{dt.strftime('%d/%m/%Y')} às 09:00",
             f"{dt.strftime('%d/%m/%Y')} às 14:00",
@@ -324,7 +324,7 @@ def validate_datetime(dt: datetime, allow_weekends: bool = False) -> ValidationR
         ]
         return ValidationResult(
             is_valid=False,
-            message=f"O horário {dt.strftime('%H:%M')} está fora do horário de atendimento (7h às 20h).",
+            message=f"O horário {dt.strftime('%H:%M')} está fora do horário de atendimento (8h às 20h).",
             suggestions=suggestions
         )
     
