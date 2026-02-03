@@ -1,0 +1,264 @@
+{
+    "info": {
+        "_postman_id": "a9b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+        "name": "MedAgenda API",
+        "description": "Collection for testing the MedAgenda appointment scheduling agent API.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "General",
+            "item": [
+                {
+                    "name": "Root Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        },
+                        "description": "Get API version and available endpoints."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Chat & Agent",
+            "item": [
+                {
+                    "name": "Send Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"session_id\": \"user_123\",\n    \"message\": \"Olá, quero agendar um clínico geral para amanhã às 14h\",\n    \"channel\": \"web\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "Interact with the scheduling agent."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message (Debug)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"session_id\": \"user_123\",\n    \"message\": \"Quero agendar cardiologista\",\n    \"channel\": \"web\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat?debug=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ],
+                            "query": [
+                                {
+                                    "key": "debug",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "description": "Interact with agent including state debug information."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reset Session",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/sessions/user_123/reset",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sessions",
+                                "user_123",
+                                "reset"
+                            ]
+                        },
+                        "description": "Clear conversation history for a specific session."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Appointments",
+            "item": [
+                {
+                    "name": "List Appointments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/appointments?limit=10&offset=0",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "appointments"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        },
+                        "description": "Get a paginated list of all appointments."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Appointment Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/appointments/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "appointments",
+                                "1"
+                            ]
+                        },
+                        "description": "Get detailed information about a specific appointment by ID."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Availability Slots",
+            "item": [
+                {
+                    "name": "List Slots",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/slots?specialty=Cardiologia&date=2026-02-20",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "slots"
+                            ],
+                            "query": [
+                                {
+                                    "key": "specialty",
+                                    "value": "Cardiologia"
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "2026-02-20"
+                                }
+                            ]
+                        },
+                        "description": "List available slots with optional filters."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Bulk Create Slots",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"slots\": [\n        {\n            \"specialty\": \"Cardiologia\",\n            \"slot_datetime\": \"2026-02-20 09:00\"\n        },\n        {\n            \"specialty\": \"Cardiologia\",\n            \"slot_datetime\": \"2026-02-20 10:00\"\n        },\n        {\n            \"specialty\": \"Dermatologia\",\n            \"slot_datetime\": \"2026-02-21 14:00\"\n        }\n    ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/slots",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "slots"
+                            ]
+                        },
+                        "description": "Create multiple available slots at once."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Bulk Delete Slots",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"ids\": [1, 2, 3]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/slots",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "slots"
+                            ]
+                        },
+                        "description": "Delete multiple slots by ID."
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        }
+    ]
+}

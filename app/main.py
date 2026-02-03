@@ -1,5 +1,6 @@
 """FastAPI application for medAgenda appointment scheduling agent"""
 import logging
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -10,14 +11,22 @@ from app.models.schemas import (
     ChatResponse,
     AppointmentResponse,
     AppointmentListResponse,
-    SessionResetResponse
+    SessionResetResponse,
+    SlotCreateRequest,
+    SlotListResponse,
+    SlotResponse,
+    BulkDeleteRequest,
+    BulkActionResponse
 )
 from app.agent.graph import process_message, reset_session, get_or_create_session
 from app.db.sqlite import (
     init_db,
     get_appointment,
     list_appointments,
-    count_appointments
+    count_appointments,
+    list_available_slots,
+    insert_slots_bulk,
+    delete_slots_bulk
 )
 
 # Configure logging
@@ -59,7 +68,10 @@ async def root():
             "chat": "POST /chat",
             "appointments": "GET /appointments",
             "appointment_detail": "GET /appointments/{id}",
-            "reset_session": "POST /sessions/{session_id}/reset"
+            "reset_session": "POST /sessions/{session_id}/reset",
+            "list_slots": "GET /slots",
+            "create_slots": "POST /slots",
+            "delete_slots": "DELETE /slots"
         }
     }
 
@@ -207,6 +219,57 @@ async def reset_user_session(session_id: str):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error resetting session: {str(e)}")
+
+
+# --- Availability Slot Routes ---
+
+@app.get("/slots", response_model=SlotListResponse)
+async def get_slots(
+    specialty: Optional[str] = Query(None, description="Filter by specialty"),
+    date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)")
+):
+    """
+    List available slots with optional filtering.
+    """
+    try:
+        slots = list_available_slots(specialty=specialty, date=date)
+        return SlotListResponse(
+            total=len(slots),
+            slots=[SlotResponse(**slot) for slot in slots]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching slots: {str(e)}")
+
+
+@app.post("/slots", response_model=BulkActionResponse)
+async def create_slots(request: SlotCreateRequest):
+    """
+    Bulk create available slots.
+    """
+    try:
+        slots_to_insert = [slot.dict() for slot in request.slots]
+        count = insert_slots_bulk(slots_to_insert)
+        return BulkActionResponse(
+            affected_count=count,
+            message=f"{count} slots created successfully"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating slots: {str(e)}")
+
+
+@app.delete("/slots", response_model=BulkActionResponse)
+async def delete_slots(request: BulkDeleteRequest):
+    """
+    Bulk delete availability slots by ID.
+    """
+    try:
+        count = delete_slots_bulk(request.ids)
+        return BulkActionResponse(
+            affected_count=count,
+            message=f"{count} slots deleted successfully"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting slots: {str(e)}")
 
 
 if __name__ == "__main__":
