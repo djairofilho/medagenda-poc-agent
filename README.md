@@ -1,3 +1,5 @@
+<div align="center">
+
 # 🏥 medAgenda Agent
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -7,13 +9,17 @@
 
 **medAgenda** é um sistema de multi-agentes orquestrado com **LangGraph** para automação de clínicas médicas, lidando desde triagem até agendamento de consultas.
 
+</div>
+
 ---
 
 ## 🏗️ Arquitetura (LangGraph)
 
 O bot utiliza uma estrutura de agentes especializados coordenados por um roteador central:
 
-![Fluxo de Agentes](langgraph_diagram.png)
+<p align="center">
+  <img src="langgraph_diagram.png" alt="Fluxo de Agentes">
+</p>
 
 ### Agentes:
 - 🧭 **Router**: Identifica a intenção do usuário e direciona para o agente correto.
