@@ -13,7 +13,11 @@ def information_node(state: AgentState):
     
     # Load Context
     context_data = load_clinic_info()
-    formatted_prompt = INFO_PROMPT.format(context_data=context_data)
+    from datetime import datetime
+    now = datetime.now()
+    date_info = f"\nDATA ATUAL: {now.strftime('%d/%m/%Y')} ({now.strftime('%A')})"
+    
+    formatted_prompt = INFO_PROMPT.format(context_data=context_data) + date_info
     
     # Construct prompt
     prompt = [SystemMessage(content=formatted_prompt)] + messages
