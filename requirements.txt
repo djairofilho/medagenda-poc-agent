@@ -4,8 +4,10 @@ pydantic
 langgraph
 langchain-core
 pytest
-pydantic-ai
-pydantic-ai-slim
 google-generativeai
 openai
 anthropic
+python-dotenv
+langchain-google-genai
+langchain-openai
+streamlit
