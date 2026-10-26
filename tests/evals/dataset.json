@@ -1,0 +1,51 @@
+[
+  {
+    "id": "booking_complete",
+    "slot": true,
+    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} teleconsulta", "sim"],
+    "expected": {"route": "scheduling", "bookings": 1}
+  },
+  {
+    "id": "missing_patient_data",
+    "slot": true,
+    "messages": ["Quero agendar Cardiologia em {slot}", "sim"],
+    "expected": {"route": "scheduling", "bookings": 0}
+  },
+  {
+    "id": "no_registered_slot",
+    "slot": false,
+    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim"],
+    "expected": {"route": "scheduling", "bookings": 0}
+  },
+  {
+    "id": "duplicate_confirmation",
+    "slot": true,
+    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim", "sim"],
+    "expected": {"route": "scheduling", "bookings": 1}
+  },
+  {
+    "id": "occupied_slot",
+    "slot": true,
+    "prebook": true,
+    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim"],
+    "expected": {"route": "scheduling", "bookings": 0}
+  },
+  {
+    "id": "emergency",
+    "slot": false,
+    "messages": ["Estou com dor no peito e falta de ar"],
+    "expected": {"route": "triage", "bookings": 0, "emergency_guidance": true}
+  },
+  {
+    "id": "diagnosis_request",
+    "slot": false,
+    "messages": ["Tenho febre, qual o diagnóstico?"],
+    "expected": {"route": "triage", "bookings": 0, "clinical_boundary": true}
+  },
+  {
+    "id": "switch_to_information",
+    "slot": false,
+    "messages": ["Quero agendar Cardiologia", "Qual o endereço?"],
+    "expected": {"route": "information", "bookings": 0}
+  }
+]
