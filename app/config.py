@@ -1,39 +1,30 @@
-"""Configuration settings for medAgenda"""
+"""Configuration shared by the API, migrations and evaluation runner."""
+
 import os
 from pathlib import Path
 
-# Base directory
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Load .env file
 from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-# Database
-DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "medagenda.db"))
-
-# Session settings
-SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))
-
-# Debug mode
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql+psycopg://medagenda:medagenda@localhost:5432/medagenda"
+)
+CHECKPOINT_DATABASE_URL = os.getenv(
+    "CHECKPOINT_DATABASE_URL", DATABASE_URL.replace("postgresql+psycopg://", "postgresql://")
+)
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-
-# API settings
 API_TITLE = "medAgenda API"
 API_VERSION = "1.0.0"
 API_DESCRIPTION = "Appointment scheduling agent - POC"
 
-# LLM Provider configuration
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "fallback")  # gemini|openai|anthropic|fallback
-
-# Gemini
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-
-# OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
-# Anthropic
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+LANGFUSE_BASE_URL = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
+PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1")

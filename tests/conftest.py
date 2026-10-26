@@ -1,19 +1,45 @@
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-from app.db.sqlite import init_db
-import os
+"""Isolated PostgreSQL database for every integration test."""
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_db():
-    """Initialize the test database."""
-    # Ensure we use a test database if possible, or just init the default one for now
-    # In a real scenario, we might want to override the database path in app.config
-    init_db()
-    yield
+from uuid import uuid4
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
+
+from app import config
+from app.main import create_app
+from app.evals.fake_model import FakeModel
+
 
 @pytest.fixture
-def client():
-    """FastAPI test client fixture."""
-    with TestClient(app) as c:
-        yield c
+def app_factory():
+    source = make_url(config.DATABASE_URL)
+    if source.host not in ("localhost", "127.0.0.1"):
+        pytest.skip("Integration tests require the local PostgreSQL Compose service")
+    name = f"medagenda_test_{uuid4().hex[:12]}"
+    admin = create_engine(source.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    with admin.connect() as connection:
+        connection.execute(text(f'CREATE DATABASE "{name}"'))
+    test_url = source.set(database=name).render_as_string(hide_password=False)
+    checkpoint_url = test_url.replace("postgresql+psycopg://", "postgresql://")
+    migration = Config("alembic.ini")
+    migration.attributes["database_url"] = test_url
+    command.upgrade(migration, "head")
+
+    def factory(model=None, tracer=None):
+        return create_app(database_url=test_url, checkpoint_url=checkpoint_url,
+                          model=model or FakeModel(), tracer=tracer)
+
+    yield factory
+    with admin.connect() as connection:
+        connection.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
+    admin.dispose()
+
+
+@pytest.fixture
+def client(app_factory):
+    with TestClient(app_factory()) as test_client:
+        yield test_client

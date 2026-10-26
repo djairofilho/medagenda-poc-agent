@@ -6,9 +6,9 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	router(router)
-	scheduling(scheduling)
 	triage(triage)
 	information(information)
+	scheduling(scheduling)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> router;
 	router -.-> information;
@@ -17,6 +17,6 @@ graph TD;
 	information --> __end__;
 	scheduling --> __end__;
 	triage --> __end__;
-	classDef default fil71451050046l:#f2f0ff,line-height:1.2
+	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
