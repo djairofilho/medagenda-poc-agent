@@ -5,13 +5,14 @@ import re
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 
 from app import config
 from app.appointments.service import book_appointment
@@ -24,6 +25,16 @@ DATASET_PATH = Path(__file__).resolve().parent.parent.parent / "tests" / "evals"
 @contextmanager
 def temporary_database():
     source = make_url(config.DATABASE_URL)
+    if source.drivername in ("sqlite", "sqlite+pysqlite"):
+        with TemporaryDirectory(prefix="medagenda_eval_") as directory:
+            url = URL.create("sqlite+pysqlite", database=str(Path(directory) / "eval.sqlite")).render_as_string()
+            migration = Config("alembic.ini")
+            migration.attributes["database_url"] = url
+            command.upgrade(migration, "head")
+            yield url, url
+        return
+    if source.drivername != "postgresql+psycopg":
+        raise RuntimeError("Evals require a PostgreSQL or SQLite DATABASE_URL")
     if source.host not in ("localhost", "127.0.0.1"):
         raise RuntimeError("Evals create temporary databases only on local PostgreSQL")
     name = f"medagenda_eval_{uuid4().hex[:12]}"

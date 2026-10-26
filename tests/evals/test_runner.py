@@ -1,5 +1,6 @@
 from app.evals.runner import _sanitize_reply, critical_checks, load_dataset, publish_experiment, run_case
 from app.evals.fake_model import FakeModel
+from sqlalchemy.engine import URL
 
 
 def test_synthetic_dataset_covers_critical_paths():
@@ -12,6 +13,17 @@ def test_synthetic_dataset_covers_critical_paths():
     for case in cases:
         output = run_case(case, model=FakeModel())
         assert all(critical_checks(case, output).values()), (case["id"], output)
+
+
+def test_local_runner_uses_sqlite_when_configured(monkeypatch, tmp_path):
+    from app import config
+
+    monkeypatch.setattr(config, "DATABASE_URL", URL.create(
+        "sqlite+pysqlite", database=str(tmp_path / "source.sqlite")
+    ).render_as_string())
+    case = next(case for case in load_dataset() if case["id"] == "booking_complete")
+    output = run_case(case, model=FakeModel())
+    assert all(critical_checks(case, output).values())
 
 
 def test_experiment_output_masks_identifiers():
