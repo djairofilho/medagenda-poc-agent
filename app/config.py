@@ -14,7 +14,7 @@ DATABASE_URL = os.getenv(
 CHECKPOINT_DATABASE_URL = os.getenv("CHECKPOINT_DATABASE_URL") or None
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 API_TITLE = "medAgenda API"
-API_VERSION = "1.0.0"
+API_VERSION = "3.0"
 API_DESCRIPTION = "Appointment scheduling agent - POC"
 
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
