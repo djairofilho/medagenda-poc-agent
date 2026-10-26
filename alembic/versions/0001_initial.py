@@ -1,4 +1,4 @@
-"""Initial PostgreSQL schema for the POC.
+"""Initial relational schema for the POC (PostgreSQL and SQLite).
 
 Revision ID: 0001_initial
 Revises:

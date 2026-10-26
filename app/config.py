@@ -11,9 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql+psycopg://medagenda:medagenda@localhost:5432/medagenda"
 )
-CHECKPOINT_DATABASE_URL = os.getenv(
-    "CHECKPOINT_DATABASE_URL", DATABASE_URL.replace("postgresql+psycopg://", "postgresql://")
-)
+CHECKPOINT_DATABASE_URL = os.getenv("CHECKPOINT_DATABASE_URL") or None
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 API_TITLE = "medAgenda API"
 API_VERSION = "1.0.0"

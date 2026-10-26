@@ -15,7 +15,7 @@ config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 if config.config_file_name:
     fileConfig(config.config_file_name)
 target_metadata = Base.metadata
-CHECKPOINT_TABLES = {"checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"}
+CHECKPOINT_TABLES = {"checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations", "writes"}
 
 
 def include_name(name, type_, parent_names):

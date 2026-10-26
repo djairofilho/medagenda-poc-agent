@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert
 
+from app.infrastructure.database import dialect_insert, utc_isoformat
 from app.infrastructure.models import AvailabilitySlot
 
 LOCAL_TZ = ZoneInfo("America/Sao_Paulo")
@@ -21,6 +21,9 @@ def parse_slot_datetime(value: str) -> datetime:
 
 
 def display_slot_datetime(value: datetime) -> str:
+    if value.tzinfo is None:
+        # SQLite drops timezone metadata but retains the local wall time.
+        value = value.replace(tzinfo=LOCAL_TZ)
     return value.astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
 
 
@@ -30,7 +33,7 @@ def serialize_slot(slot: AvailabilitySlot) -> dict:
         "specialty": slot.specialty,
         "slot_datetime": display_slot_datetime(slot.slot_datetime),
         "is_available": slot.is_available,
-        "created_at": slot.created_at.isoformat(),
+        "created_at": utc_isoformat(slot.created_at),
     }
 
 
@@ -63,9 +66,9 @@ def create_slots(session_factory, slots: list[dict]) -> int:
     ]
     with session_factory.begin() as session:
         result = session.execute(
-            insert(AvailabilitySlot)
+            dialect_insert(session, AvailabilitySlot)
             .values(values)
-            .on_conflict_do_nothing(constraint="uq_availability_slot")
+            .on_conflict_do_nothing()
             .returning(AvailabilitySlot.id)
         )
         return len(result.all())

@@ -2,11 +2,11 @@
 
 from dataclasses import dataclass
 from sqlalchemy import func, select, update
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import joinedload
 
 from app.availability.service import display_slot_datetime
 from app.infrastructure.models import Appointment, AvailabilitySlot, Patient
+from app.infrastructure.database import dialect_insert, lock_sqlite_writer, utc_isoformat
 from app.patients.service import digits, valid_cpf, valid_phone
 
 
@@ -19,7 +19,7 @@ class BookingResult:
 def serialize_appointment(appointment: Appointment) -> dict:
     return {
         "id": appointment.id,
-        "created_at": appointment.created_at.isoformat(),
+        "created_at": utc_isoformat(appointment.created_at),
         "name": appointment.patient.name,
         "phone": appointment.patient.phone,
         "specialty": appointment.specialty,
@@ -54,10 +54,11 @@ def list_appointments(session_factory, limit: int, offset: int) -> tuple[int, li
 
 def book_appointment(session_factory, *, slot_id: int, name: str, cpf: str, phone: str,
                      mode: str, channel: str, confirmation_key: str) -> BookingResult:
-    """A conditional UPDATE arbitrates concurrent bookings in PostgreSQL."""
+    """A conditional UPDATE arbitrates concurrent bookings in both databases."""
     if not name.strip() or not valid_cpf(cpf) or not valid_phone(phone) or mode not in ("presencial", "teleconsulta"):
         return BookingResult("invalid")
     with session_factory.begin() as session:
+        lock_sqlite_writer(session)
         existing = session.scalar(select(Appointment.id).where(Appointment.confirmation_key == confirmation_key))
         if existing:
             return BookingResult("already_booked", existing)
@@ -72,7 +73,7 @@ def book_appointment(session_factory, *, slot_id: int, name: str, cpf: str, phon
             existing = session.scalar(select(Appointment.id).where(Appointment.confirmation_key == confirmation_key))
             return BookingResult("already_booked", existing) if existing else BookingResult("unavailable")
         patient_id = session.scalar(
-            insert(Patient)
+            dialect_insert(session, Patient)
             .values(name=name.strip(), cpf=digits(cpf), phone=digits(phone), channel=channel)
             .on_conflict_do_update(
                 index_elements=[Patient.cpf],

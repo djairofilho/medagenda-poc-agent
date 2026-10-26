@@ -18,6 +18,7 @@ def test_create_list_filter_and_delete_slots(client):
     assert listed.json()["total"] == 1
     slot = listed.json()["slots"][0]
     assert slot["slot_datetime"] == future
+    assert slot["created_at"].endswith("+00:00")
     deleted = client.request("DELETE", "/slots", json={"ids": [slot["id"]]})
     assert deleted.json()["affected_count"] == 1
     assert client.get("/slots?specialty=Pediatria").json()["total"] == 0

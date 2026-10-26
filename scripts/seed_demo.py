@@ -2,11 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.dialects.postgresql import insert
-
 from app import config
 from app.availability.service import LOCAL_TZ
-from app.infrastructure.database import make_session_factory
+from app.infrastructure.database import dialect_insert, make_session_factory
 from app.infrastructure.models import AvailabilitySlot, ClinicInfo
 
 
@@ -24,15 +22,15 @@ def seed(session_factory):
     with session_factory.begin() as session:
         for key, value in details.items():
             session.execute(
-                insert(ClinicInfo).values(key=key, value=value, updated_at=datetime.now(timezone.utc))
+                dialect_insert(session, ClinicInfo).values(key=key, value=value, updated_at=datetime.now(timezone.utc))
                 .on_conflict_do_nothing(index_elements=[ClinicInfo.key])
             )
         for value in slots:
             session.execute(
-                insert(AvailabilitySlot)
+                dialect_insert(session, AvailabilitySlot)
                 .values(specialty="Cardiologia", slot_datetime=value,
                         is_available=True, created_at=datetime.now(timezone.utc))
-                .on_conflict_do_nothing(constraint="uq_availability_slot")
+                .on_conflict_do_nothing()
             )
 
 

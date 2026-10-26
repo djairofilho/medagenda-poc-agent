@@ -34,8 +34,10 @@ def test_booking_requires_real_slot_patient_data_and_confirmation(client):
     assert listed["total"] == 1
     assert "cpf" not in listed["appointments"][0]
     assert listed["appointments"][0]["mode"] == "teleconsulta"
+    assert listed["appointments"][0]["created_at"].endswith("+00:00")
     assert client.get("/slots?specialty=Cardiologia").json()["total"] == 0
     assert client.get("/appointments/1").json()["name"] == "Ana Souza"
+    assert client.get("/appointments/1").json()["preferred_datetime"] == when
 
     next_reply = _chat(client, "booking", "Quero agendar outra consulta")
     assert "especialidade" in next_reply.lower()

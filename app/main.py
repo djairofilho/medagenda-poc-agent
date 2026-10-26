@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from langgraph.checkpoint.postgres import PostgresSaver
 
 from app import config
 from app.appointments.router import router as appointments_router
@@ -13,21 +12,21 @@ from app.conversations.llm import LangChainModel
 from app.conversations.router import router as conversations_router
 from app.conversations.service import ConversationService
 from app.infrastructure.database import make_session_factory
+from app.infrastructure.checkpoints import open_checkpointer
 from app.observability.tracing import make_tracer
 
 
 def create_app(*, database_url: str | None = None, checkpoint_url: str | None = None,
                model=None, tracer=None) -> FastAPI:
     database_url = database_url or config.DATABASE_URL
-    checkpoint_url = checkpoint_url or config.CHECKPOINT_DATABASE_URL
+    checkpoint_url = checkpoint_url or (config.CHECKPOINT_DATABASE_URL if database_url == config.DATABASE_URL else None) or database_url
     engine, session_factory = make_session_factory(database_url)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         active_tracer = tracer if tracer is not None else make_tracer()
         try:
-            with PostgresSaver.from_conn_string(checkpoint_url) as checkpointer:
-                checkpointer.setup()
+            with open_checkpointer(checkpoint_url) as checkpointer:
                 application.state.session_factory = session_factory
                 application.state.conversations = ConversationService(
                     model=model or LangChainModel(), session_factory=session_factory,
