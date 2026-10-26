@@ -24,24 +24,22 @@ alembic/           # versão do esquema relacional
 
 ## Executar localmente
 
-Requer Python 3.11+. O fluxo padrão com PostgreSQL usa Docker e Docker Compose.
+Requer Python 3.11+ e [uv](https://docs.astral.sh/uv/getting-started/installation/). O fluxo padrão com PostgreSQL usa Docker e Docker Compose. `pyproject.toml` declara as dependências e `uv.lock` fixa suas versões.
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+uv sync --locked
 Copy-Item .env.example .env
 docker compose up -d postgres
-alembic upgrade head
-python -m scripts.seed_demo
-uvicorn app.main:app --reload
+uv run --locked alembic upgrade head
+uv run --locked python -m scripts.seed_demo
+uv run --locked uvicorn app.main:app --reload
 ```
 
-Preencha `GOOGLE_API_KEY` com `LLM_PROVIDER=gemini`, ou use `LLM_PROVIDER=openai` com `OPENAI_API_KEY`. A API inicia sem chave, mas `/chat` devolve 503 até configurar um modelo. A interface pode ser iniciada com `streamlit run streamlit_app.py`.
+Preencha `GOOGLE_API_KEY` com `LLM_PROVIDER=gemini`, ou use `LLM_PROVIDER=openai` com `OPENAI_API_KEY`. A API inicia sem chave, mas `/chat` devolve 503 até configurar um modelo. A interface pode ser iniciada com `uv run --locked streamlit run streamlit_app.py`.
 
 `DATABASE_URL` escolhe o banco para consultas, pacientes e horários. O adapter escolhe o checkpointer correspondente do LangGraph. Por padrão, `CHECKPOINT_DATABASE_URL` usa o mesmo banco; é possível defini-lo separadamente. Para PostgreSQL, use `postgresql+psycopg://...`; para SQLite, use `sqlite+pysqlite:///./medagenda.db`. O esquema relacional é criado pelo Alembic; `seed_demo` adiciona dados fictícios, incluindo horários futuros.
 
-Para executar tudo em SQLite, altere `.env` para `DATABASE_URL=sqlite+pysqlite:///./medagenda.db`, deixe `CHECKPOINT_DATABASE_URL` sem valor e execute `alembic upgrade head`, `python -m scripts.seed_demo` e `uvicorn app.main:app --reload`. O Compose não é necessário nesse caso. Os checkpoints do SQLite ficam no mesmo arquivo `.db`. Para voltar ao PostgreSQL, restaure as URLs do exemplo e inicie o serviço do Compose. A troca de URL não transfere registros entre bancos.
+Para executar tudo em SQLite, altere `.env` para `DATABASE_URL=sqlite+pysqlite:///./medagenda.db`, deixe `CHECKPOINT_DATABASE_URL` sem valor e execute os três comandos `uv run` acima. O Compose não é necessário nesse caso. Os checkpoints do SQLite ficam no mesmo arquivo `.db`. Para voltar ao PostgreSQL, restaure as URLs do exemplo e inicie o serviço do Compose. A troca de URL não transfere registros entre bancos.
 
 ## Fluxo de agendamento
 
@@ -54,11 +52,13 @@ O estado da conversa é persistido pelo `PostgresSaver` ou `SqliteSaver`, confor
 Defina `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` e, se necessário, `LANGFUSE_BASE_URL`. Sem as duas chaves, a aplicação não cria traces. Com elas, cada mensagem gera um trace agrupado por um hash do ID da sessão. O exportador remove atributos de texto livre, incluindo prompts, respostas e conteúdo clínico; métricas numéricas e dimensões controladas continuam disponíveis. Instalações próprias devem usar uma versão do Langfuse compatível com o SDK Python v5.
 
 ```powershell
-python -m pytest -q tests
-python -m scripts.run_evals
-python -m scripts.run_evals --publish
-python -m scripts.run_evals --publish --live-model --judge
+uv run --locked python -m pytest -q tests
+uv run --locked python -m scripts.run_evals
+uv run --locked python -m scripts.run_evals --publish
+uv run --locked python -m scripts.run_evals --publish --live-model --judge
 ```
+
+Ao alterar dependências, use `uv add`, `uv add --dev` ou edite `pyproject.toml` e execute `uv lock`. Versione `pyproject.toml` e `uv.lock` juntos.
 
 O runner usa bancos temporários no backend configurado e um dataset sintético versionado em `tests/evals/dataset.json`. Sem opções, usa um modelo simulado e falha se uma regra crítica regredir. `--publish` publica experimento e scores objetivos no Langfuse. `--live-model` testa o provedor configurado; `--judge` acrescenta uma nota qualitativa de clareza e aderência somente ao experimento. O juiz não bloqueia a validação. Nenhum desses comandos usa o banco principal para os casos de avaliação.
 
