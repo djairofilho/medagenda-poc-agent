@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: medagenda
+          POSTGRES_PASSWORD: medagenda
+          POSTGRES_DB: medagenda
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medagenda -d medagenda"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgresql+psycopg://medagenda:medagenda@localhost:5432/medagenda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: '3.11'
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run --locked python -m pytest -q tests
+      - run: uv run --locked python -m scripts.run_evals
+      - run: uv run --locked python -m scripts.run_evals
+        env:
+          DATABASE_URL: sqlite+pysqlite:///./medagenda-ci.db
