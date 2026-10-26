@@ -156,7 +156,7 @@ st.markdown('<p style="text-align: center; color: #333; font-size: 1.1rem; font-
 
 # API Status Check
 if not st.session_state.api_available:
-    st.error("⚠️ **API não está disponível!**\n\nCertifique-se de que o servidor está rodando:\n```bash\nuvicorn app.main:app --port 8000\n```")
+    st.error("⚠️ **API não está disponível!**\n\nCertifique-se de que o servidor está rodando:\n```bash\nuv run --locked uvicorn app.main:app --port 8000\n```")
     st.stop()
 
 # Safety Warning
