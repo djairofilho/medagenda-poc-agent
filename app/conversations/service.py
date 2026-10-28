@@ -20,7 +20,8 @@ class ConversationService:
         return config
 
     def process_message(self, session_id: str, message: str, channel: str) -> str:
-        payload = {"messages": [HumanMessage(content=message)], "channel": channel}
+        payload = {"messages": [HumanMessage(content=message)], "channel": channel,
+                   "booking_status": "no_attempt"}
         if not self.tracer:
             result = self.graph.invoke(payload, config=self._config(session_id))
         else:

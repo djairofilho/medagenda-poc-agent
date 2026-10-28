@@ -10,6 +10,7 @@ class ConversationState(TypedDict, total=False):
     phase: str
     draft: dict
     appointment_id: int | None
+    booking_status: str
     confirmation_key: str | None
     channel: str
     current_agent: str
