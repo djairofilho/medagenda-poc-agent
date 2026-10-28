@@ -97,10 +97,12 @@ def build_graph(*, model, session_factory, checkpointer):
                 return {"messages": [AIMessage(content=(
                     f"Consulta confirmada! Número do agendamento: {result.appointment_id}. "
                     f"{draft['specialty']} em {draft['slot_datetime']} ({draft['mode']})."
-                ))], "appointment_id": result.appointment_id, "phase": "booked", "current_agent": "scheduling"}
+                ))], "appointment_id": result.appointment_id, "phase": "booked",
+                    "booking_status": result.status, "current_agent": "scheduling"}
             return {"messages": [AIMessage(content="Esse horário não está mais disponível. Escolha outro horário cadastrado.")],
                     "phase": "collecting", "draft": {**draft, "slot_id": None, "slot_datetime": None},
-                    "confirmation_key": None, "current_agent": "scheduling"}
+                    "confirmation_key": None, "booking_status": result.status,
+                    "current_agent": "scheduling"}
 
         extracted = model.extract(text, draft, config=config)
         changes = extracted.model_dump(exclude_none=True, exclude={"confirmation"})

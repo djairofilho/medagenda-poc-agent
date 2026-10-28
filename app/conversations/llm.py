@@ -5,10 +5,12 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pydantic import BaseModel, Field
 
 from app import config
 from app.clinic.service import clinic_context
+from app.conversations.prompts import PromptRegistry
 
 
 class IntentDecision(BaseModel):
@@ -26,8 +28,10 @@ class AppointmentExtraction(BaseModel):
 
 
 class LangChainModel:
-    def __init__(self):
+    def __init__(self, tracer=None, prompt_registry=None):
         self.model = None
+        self.tracer = tracer
+        self.prompt_registry = prompt_registry
         self.model_name = config.OPENAI_MODEL if config.LLM_PROVIDER == "openai" else config.GEMINI_MODEL
 
     def _get_model(self):
@@ -45,41 +49,51 @@ class LangChainModel:
             raise RuntimeError("Configure LLM_PROVIDER and a matching API key before calling /chat")
         return self.model
 
+    def _prompts(self):
+        if self.prompt_registry is None:
+            self.prompt_registry = PromptRegistry(self.tracer.client if self.tracer else None)
+        return self.prompt_registry
+
+    @staticmethod
+    def _invoke(model, messages, prompt, run_config):
+        # Langfuse's LangChain callback registers the prompt on the template run
+        # and links it to the child generation. Never put text in metadata.
+        template = ChatPromptTemplate.from_messages([
+            SystemMessage(content=prompt.text), MessagesPlaceholder("history"),
+        ])
+        if prompt.client_prompt is not None:
+            template.metadata = {"langfuse_prompt": prompt.client_prompt}
+        chain_config = dict(run_config or {})
+        chain_config["metadata"] = {**(chain_config.get("metadata") or {}), **prompt.metadata}
+        return (template | model).invoke({"history": messages}, config=chain_config)
+
     def classify(self, messages, config=None) -> str:
-        result = self._get_model().with_structured_output(IntentDecision).invoke(
-            [SystemMessage(content=(
-                "Classifique a intenção atual: agendamento, dúvida administrativa ou sintomas/pedido médico. "
-                "Se houver sintomas, use triage. Responda apenas no esquema solicitado."
-            ))] + messages[-8:], config=config
+        prompt = self._prompts().resolve("classification")
+        result = self._invoke(
+            self._get_model().with_structured_output(IntentDecision),
+            messages[-8:], prompt, config,
         )
         return result.intent
 
     def extract(self, message: str, draft: dict, config=None) -> AppointmentExtraction:
         now = datetime.now(ZoneInfo("America/Sao_Paulo")).isoformat()
-        result = self._get_model().with_structured_output(AppointmentExtraction).invoke(
-            [SystemMessage(content=(
-                f"Extraia apenas dados expressos nesta mensagem para agendamento. Agora: {now}. "
-                "Converta datas relativas somente se dia e hora forem explícitos. "
-                "Não invente campos ausentes. 'sim/confirmo' é yes; 'não/cancelar' é no. "
-                f"Dados já coletados (só contexto): { {k: v for k, v in draft.items() if k not in ('cpf', 'phone')} }"
-            )), HumanMessage(content=message)], config=config
+        context = {key: value for key, value in draft.items() if key not in ("cpf", "phone")}
+        prompt = self._prompts().resolve("extraction", now=now, draft=str(context))
+        return self._invoke(
+            self._get_model().with_structured_output(AppointmentExtraction),
+            [HumanMessage(content=message)], prompt, config,
         )
-        return result
 
     def information(self, messages, session_factory, config=None) -> str:
-        response = self._get_model().invoke(
-            [SystemMessage(content=(
-                "Responda brevemente em português somente com base nas informações abaixo. "
-                "Se faltar informação, sugira falar com a recepção.\n" + clinic_context(session_factory)
-            ))] + messages[-8:], config=config
+        prompt = self._prompts().resolve("information", clinic_context=clinic_context(session_factory))
+        response = self._invoke(
+            self._get_model(), messages[-8:], prompt, config,
         )
         return str(response.content)
 
     def triage(self, messages, config=None) -> str:
-        response = self._get_model().invoke(
-            [SystemMessage(content=(
-                "Não dê diagnóstico nem tratamento. Diga que a dúvida clínica precisa de avaliação médica "
-                "e pergunte se a pessoa deseja agendar uma consulta. Responda em português de forma breve."
-            ))] + messages[-8:], config=config
+        prompt = self._prompts().resolve("triage")
+        response = self._invoke(
+            self._get_model(), messages[-8:], prompt, config,
         )
         return str(response.content)
