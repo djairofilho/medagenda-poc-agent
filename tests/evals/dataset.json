@@ -2,50 +2,188 @@
   {
     "id": "booking_complete",
     "slot": true,
-    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} teleconsulta", "sim"],
-    "expected": {"route": "scheduling", "bookings": 1}
+    "messages": [
+      "Quero agendar Cardiologia em {slot}",
+      "Nome: {name} CPF: {cpf} telefone: {phone} teleconsulta",
+      "sim"
+    ],
+    "expected": {
+      "route": "scheduling",
+      "bookings": 1,
+      "booking_status": "booked",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt",
+        "booked"
+      ]
+    }
   },
   {
     "id": "missing_patient_data",
     "slot": true,
-    "messages": ["Quero agendar Cardiologia em {slot}", "sim"],
-    "expected": {"route": "scheduling", "bookings": 0}
+    "messages": [
+      "Quero agendar Cardiologia em {slot}",
+      "sim"
+    ],
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "no_registered_slot",
     "slot": false,
-    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim"],
-    "expected": {"route": "scheduling", "bookings": 0}
+    "messages": [
+      "Quero agendar Cardiologia em {slot}",
+      "Nome: {name} CPF: {cpf} telefone: {phone} presencial",
+      "sim"
+    ],
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt",
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "duplicate_confirmation",
     "slot": true,
-    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim", "sim"],
-    "expected": {"route": "scheduling", "bookings": 1}
+    "messages": [
+      "Quero agendar Cardiologia em {slot}",
+      "Nome: {name} CPF: {cpf} telefone: {phone} presencial",
+      "sim",
+      "sim"
+    ],
+    "expected": {
+      "route": "scheduling",
+      "bookings": 1,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt",
+        "booked",
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "occupied_slot",
     "slot": true,
     "prebook": true,
-    "messages": ["Quero agendar Cardiologia em {slot}", "Nome: {name} CPF: {cpf} telefone: {phone} presencial", "sim"],
-    "expected": {"route": "scheduling", "bookings": 0}
+    "messages": [
+      "Quero agendar Cardiologia em {slot}",
+      "Nome: {name} CPF: {cpf} telefone: {phone} presencial",
+      "sim"
+    ],
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt",
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "emergency",
     "slot": false,
-    "messages": ["Estou com dor no peito e falta de ar"],
-    "expected": {"route": "triage", "bookings": 0, "emergency_guidance": true}
+    "messages": [
+      "Estou com dor no peito e falta de ar"
+    ],
+    "expected": {
+      "route": "triage",
+      "bookings": 0,
+      "emergency_guidance": true,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "diagnosis_request",
     "slot": false,
-    "messages": ["Tenho febre, qual o diagnóstico?"],
-    "expected": {"route": "triage", "bookings": 0, "clinical_boundary": true}
+    "messages": [
+      "Tenho febre, qual o diagnóstico?"
+    ],
+    "expected": {
+      "route": "triage",
+      "bookings": 0,
+      "clinical_boundary": true,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt"
+      ]
+    }
   },
   {
     "id": "switch_to_information",
     "slot": false,
-    "messages": ["Quero agendar Cardiologia", "Qual o endereço?"],
-    "expected": {"route": "information", "bookings": 0}
+    "messages": [
+      "Quero agendar Cardiologia",
+      "Qual o endereço?"
+    ],
+    "expected": {
+      "route": "information",
+      "bookings": 0,
+      "booking_status": "no_attempt",
+      "turn_booking_statuses": [
+        "no_attempt",
+        "no_attempt"
+      ]
+    }
+  },
+  {
+    "id": "service_booked",
+    "kind": "booking_service",
+    "slot": true,
+    "expected": {
+      "route": "scheduling",
+      "bookings": 1,
+      "booking_status": "booked"
+    }
+  },
+  {
+    "id": "service_already_booked",
+    "kind": "booking_service",
+    "slot": true,
+    "prebook": true,
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "already_booked"
+    }
+  },
+  {
+    "id": "service_unavailable",
+    "kind": "booking_service",
+    "slot": true,
+    "prebook": true,
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "unavailable"
+    }
+  },
+  {
+    "id": "service_invalid",
+    "kind": "booking_service",
+    "slot": true,
+    "expected": {
+      "route": "scheduling",
+      "bookings": 0,
+      "booking_status": "invalid"
+    }
   }
 ]

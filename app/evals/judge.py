@@ -27,6 +27,8 @@ def judge_reply(reply: str) -> dict[str, int]:
 def quality_score(*, output, **kwargs):
     from langfuse import Evaluation
 
+    if "quality" not in output:
+        return None  # Service-only cases have no reply to judge.
     rating = output["quality"]
     return Evaluation(
         name="judge_quality", value=(rating["clarity"] + rating["instruction_adherence"]) / 10,
