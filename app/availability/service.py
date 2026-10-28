@@ -39,7 +39,10 @@ def serialize_slot(slot: AvailabilitySlot) -> dict:
 
 def list_slots(session_factory, specialty: str | None = None, date: str | None = None) -> list[dict]:
     with session_factory() as session:
-        query = select(AvailabilitySlot).where(AvailabilitySlot.is_available.is_(True))
+        query = select(AvailabilitySlot).where(
+            AvailabilitySlot.is_available.is_(True),
+            AvailabilitySlot.slot_datetime > datetime.now(LOCAL_TZ),
+        )
         if specialty:
             query = query.where(AvailabilitySlot.specialty.ilike(specialty))
         if date:

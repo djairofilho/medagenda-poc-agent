@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from app.availability.service import LOCAL_TZ
+from app.infrastructure.models import AvailabilitySlot
 
 
 def test_create_list_filter_and_delete_slots(client):
@@ -27,3 +28,10 @@ def test_create_list_filter_and_delete_slots(client):
 def test_rejects_past_slot(client):
     response = client.post("/slots", json={"slots": [{"specialty": "Pediatria", "slot_datetime": "2020-01-01 10:00"}]})
     assert response.status_code == 422
+
+
+def test_listing_omits_expired_slots(client):
+    yesterday = datetime.now(LOCAL_TZ) - timedelta(days=1)
+    with client.app.state.session_factory.begin() as session:
+        session.add(AvailabilitySlot(specialty="Pediatria", slot_datetime=yesterday, is_available=True))
+    assert client.get("/slots?specialty=Pediatria").json()["total"] == 0
