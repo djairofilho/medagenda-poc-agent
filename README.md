@@ -51,7 +51,15 @@ O estado da conversa é persistido pelo `PostgresSaver` ou `SqliteSaver`, confor
 
 ## Langfuse e evals
 
-Defina `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` e, se necessário, `LANGFUSE_BASE_URL`. Sem as duas chaves, a aplicação não cria traces. Com elas, cada mensagem gera um trace agrupado por um hash do ID da sessão. O exportador remove atributos de texto livre, incluindo prompts, respostas e conteúdo clínico; métricas numéricas e dimensões controladas continuam disponíveis. Instalações próprias devem usar uma versão do Langfuse compatível com o SDK Python v5.
+Defina `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` e, se necessário, `LANGFUSE_BASE_URL`. Defina também `LANGFUSE_TRACING_ENVIRONMENT=production` no serviço para filtrar o painel de produção. Sem as duas chaves, a aplicação não cria traces. Com elas, cada mensagem gera um trace agrupado por um hash do ID da sessão. O exportador remove atributos de texto livre, incluindo prompts, respostas e conteúdo clínico; métricas numéricas e dimensões controladas continuam disponíveis. Instalações próprias devem usar uma versão do Langfuse compatível com o SDK Python v5. O [guia de monitoramento](docs/observability.md) especifica widgets e alertas para recriação manual.
+
+Publique as quatro versões iniciais com o rótulo `production` somente quando quiser ativá-las no projeto Langfuse configurado:
+
+```powershell
+uv run --locked python -m scripts.publish_prompts --publish
+```
+
+O comando não faz parte do CI. Sem uma versão acessível, cada adaptador usa o prompt local correspondente.
 
 ```powershell
 uv run --locked python -m pytest -q tests
@@ -62,9 +70,9 @@ uv run --locked python -m scripts.run_evals --publish --live-model --judge
 
 Ao alterar dependências, use `uv add`, `uv add --dev` ou edite `pyproject.toml` e execute `uv lock`. Versione `pyproject.toml` e `uv.lock` juntos.
 
-O runner usa bancos temporários no backend configurado e um dataset sintético versionado em `tests/evals/dataset.json`. Sem opções, usa um modelo simulado e falha se uma regra crítica regredir. `--publish` publica experimento e scores objetivos no Langfuse. `--live-model` testa o provedor configurado; `--judge` acrescenta uma nota qualitativa de clareza e aderência somente ao experimento. O juiz não bloqueia a validação. Nenhum desses comandos usa o banco principal para os casos de avaliação.
+O runner usa bancos temporários no backend configurado e um dataset sintético versionado em `tests/evals/dataset.json`. Sem opções, usa um modelo simulado e falha se uma regra crítica regredir. O CI executa essas verificações em PostgreSQL e SQLite. `--publish` publica experimento e scores objetivos no Langfuse. `--live-model` testa o provedor configurado; `--judge` acrescenta uma nota qualitativa de clareza e aderência somente ao experimento. Modelo real e publicação são operações manuais ou agendadas e não bloqueiam cada PR. Nenhum desses comandos usa o banco principal para os casos de avaliação.
 
-Os itens publicados contêm o ID do cenário e as métricas calculadas; mensagens e respostas ficam no processo local. A publicação remota exige credenciais Langfuse válidas.
+Os itens publicados contêm somente o ID do cenário, resultados controlados e métricas calculadas; mensagens e respostas ficam no processo local. Os metadados da execução incluem versões do código, dos prompts e do dataset. A publicação remota exige credenciais Langfuse válidas.
 
 ## Endpoints principais
 
