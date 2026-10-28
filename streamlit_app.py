@@ -113,7 +113,12 @@ st.markdown("""
     
     /* Sidebar styling */
     [data-testid="stSidebar"] {
-        background-color: #f8f9fa;
+        background-color: #182331;
+        color: #f8fafc;
+    }
+
+    [data-testid="stSidebar"] :is(h1, h2, h3, h4, p, li, label, small) {
+        color: #f8fafc;
     }
     
     /* Button styling */
@@ -152,7 +157,7 @@ if 'api_available' not in st.session_state:
 
 # Header
 st.markdown('<h1 class="main-header">🏥 medAgenda</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #333; font-size: 1.1rem; font-weight: 500;">Assistente Virtual para Agendamento de Consultas</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: inherit; font-size: 1.1rem; font-weight: 500;">Assistente Virtual para Agendamento de Consultas</p>', unsafe_allow_html=True)
 
 # API Status Check
 if not st.session_state.api_available:
@@ -323,7 +328,7 @@ if len(st.session_state.messages) == 0:
 # Footer
 st.markdown("---")
 st.markdown("""
-<p style="text-align: center; color: #666; font-size: 0.9rem; font-weight: 500;">
+<p style="text-align: center; color: inherit; opacity: 0.8; font-size: 0.9rem; font-weight: 500;">
     ⚡ medAgenda POC - Powered by LangGraph & FastAPI
 </p>
 """, unsafe_allow_html=True)
