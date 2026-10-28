@@ -50,7 +50,3 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
-
-# Generated diagrams (can be regenerated with generate_graph_diagram.py)
-langgraph_diagram.mmd
-langgraph_diagram.png

@@ -22,6 +22,8 @@ alembic/           # versão do esquema relacional
 
 `main.py` monta a aplicação e registra os routers. Os caminhos e formatos HTTP existentes continuam disponíveis, inclusive `POST /chat` e `POST /sessions/{session_id}/reset`, usados pelo Streamlit.
 
+O diagrama do grafo fica em `docs/`. Para atualizar o Mermaid e o PNG, execute `uv run --locked python -m scripts.generate_graph_diagram` na raiz do projeto.
+
 ## Executar localmente
 
 Requer Python 3.11+ e [uv](https://docs.astral.sh/uv/getting-started/installation/). O fluxo padrão com PostgreSQL usa Docker e Docker Compose. `pyproject.toml` declara as dependências e `uv.lock` fixa suas versões.
