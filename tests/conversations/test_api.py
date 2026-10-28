@@ -5,7 +5,7 @@ def test_root_and_chat_contract(client):
     root = client.get("/")
     assert root.status_code == 200
     assert "medAgenda API" in root.json()["message"]
-    assert root.json()["version"] == "3.0"
+    assert root.json()["version"] == "3.1"
     response = client.post("/chat", json={"session_id": "hello", "message": "Qual o endereço?", "channel": "web"})
     assert response.status_code == 200
     assert response.json()["session_id"] == "hello"
