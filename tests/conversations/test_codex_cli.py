@@ -21,6 +21,8 @@ def test_codex_cli_uses_structured_output_without_exposing_app_keys(monkeypatch)
     def fake_run(command, *, input, env, **kwargs):
         commands.append(command)
         assert "--ephemeral" in command and "read-only" in command
+        assert command[command.index("--model") + 1] == "gpt-6-luna"
+        assert command[command.index("--config") + 1] == "model_reasoning_effort=low"
         assert "DATABASE_URL" not in env and "LANGFUSE_SECRET_KEY" not in env
         assert kwargs["timeout"] == 120
         Path(command[command.index("-o") + 1]).write_text(json.dumps(next(replies)), encoding="utf-8")
@@ -28,7 +30,8 @@ def test_codex_cli_uses_structured_output_without_exposing_app_keys(monkeypatch)
 
     monkeypatch.setattr("shutil.which", lambda _: "codex")
     monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr(config, "CODEX_MODEL", None)
+    monkeypatch.setattr(config, "CODEX_MODEL", "gpt-6-luna")
+    monkeypatch.setattr(config, "CODEX_REASONING_EFFORT", "low")
     monkeypatch.setenv("DATABASE_URL", "private-db-url")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "private-key")
     model = CodexCliModel()

@@ -62,6 +62,8 @@ class CodexCliModel:
             ]
             if config.CODEX_MODEL:
                 command.extend(["--model", config.CODEX_MODEL])
+            if config.CODEX_REASONING_EFFORT:
+                command.extend(["--config", f"model_reasoning_effort={config.CODEX_REASONING_EFFORT}"])
             if schema is not None:
                 schema_path = path / "schema.json"
                 schema_path.write_text(json.dumps(schema), encoding="utf-8")
