@@ -37,6 +37,8 @@ uv run --locked uvicorn app.main:app --reload
 
 Preencha `GOOGLE_API_KEY` com `LLM_PROVIDER=gemini`, ou use `LLM_PROVIDER=openai` com `OPENAI_API_KEY`. A API inicia sem chave, mas `/chat` devolve 503 até configurar um modelo. A interface pode ser iniciada com `uv run --locked streamlit run streamlit_app.py`.
 
+Para uma demonstração local com o login do Codex CLI, use `LLM_PROVIDER=codex` em `.env` e confira `codex login status`. `CODEX_MODEL` é opcional; sem ele, a CLI usa o modelo padrão. Cada etapa do modelo inicia um processo `codex exec`, então o chat fica mais lento. Use essa opção apenas em uma máquina confiável e mantenha a API acessível somente em `127.0.0.1`.
+
 `DATABASE_URL` escolhe o banco para consultas, pacientes e horários. O adapter escolhe o checkpointer correspondente do LangGraph. Por padrão, `CHECKPOINT_DATABASE_URL` usa o mesmo banco; é possível defini-lo separadamente. Para PostgreSQL, use `postgresql+psycopg://...`; para SQLite, use `sqlite+pysqlite:///./medagenda.db`. O esquema relacional é criado pelo Alembic; `seed_demo` adiciona dados fictícios, incluindo horários futuros.
 
 Para executar tudo em SQLite, altere `.env` para `DATABASE_URL=sqlite+pysqlite:///./medagenda.db`, deixe `CHECKPOINT_DATABASE_URL` sem valor e execute os três comandos `uv run` acima. O Compose não é necessário nesse caso. Os checkpoints do SQLite ficam no mesmo arquivo `.db`. Para voltar ao PostgreSQL, restaure as URLs do exemplo e inicie o serviço do Compose. A troca de URL não transfere registros entre bancos.

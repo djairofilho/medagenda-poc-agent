@@ -9,6 +9,7 @@ from app import config
 from app.appointments.router import router as appointments_router
 from app.availability.router import router as availability_router
 from app.conversations.llm import LangChainModel
+from app.conversations.codex_cli import CodexCliModel
 from app.conversations.router import router as conversations_router
 from app.conversations.service import ConversationService
 from app.infrastructure.database import make_session_factory
@@ -27,9 +28,12 @@ def create_app(*, database_url: str | None = None, checkpoint_url: str | None = 
         active_tracer = tracer if tracer is not None else make_tracer()
         try:
             with open_checkpointer(checkpoint_url) as checkpointer:
+                active_model = model or (CodexCliModel() if config.LLM_PROVIDER == "codex" else LangChainModel())
+                if isinstance(active_model, CodexCliModel):
+                    active_model.tracer = active_tracer
                 application.state.session_factory = session_factory
                 application.state.conversations = ConversationService(
-                    model=model or LangChainModel(), session_factory=session_factory,
+                    model=active_model, session_factory=session_factory,
                     checkpointer=checkpointer, tracer=active_tracer,
                 )
                 yield

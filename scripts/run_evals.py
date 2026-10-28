@@ -3,8 +3,10 @@
 import argparse
 
 from app.conversations.llm import LangChainModel
+from app.conversations.codex_cli import CodexCliModel
 from app.evals.runner import load_dataset, publish_experiment, run_local
 from app.evals.fake_model import FakeModel
+from app import config
 
 
 def main():
@@ -15,7 +17,12 @@ def main():
     args = parser.parse_args()
     if args.judge and not args.publish:
         parser.error("--judge requires --publish")
-    model = LangChainModel() if args.live_model else FakeModel()
+    if args.judge and config.LLM_PROVIDER == "codex":
+        parser.error("--judge requires an OpenAI or Gemini API provider")
+    if args.live_model:
+        model = CodexCliModel() if config.LLM_PROVIDER == "codex" else LangChainModel()
+    else:
+        model = FakeModel()
     cases = load_dataset()
     results = run_local(cases, model=model)
     for result in results:
