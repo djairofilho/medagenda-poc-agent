@@ -29,7 +29,7 @@ def create_app(*, database_url: str | None = None, checkpoint_url: str | None = 
         try:
             with open_checkpointer(checkpoint_url) as checkpointer:
                 active_model = model or (CodexCliModel() if config.LLM_PROVIDER == "codex" else LangChainModel())
-                if isinstance(active_model, CodexCliModel):
+                if isinstance(active_model, (CodexCliModel, LangChainModel)):
                     active_model.tracer = active_tracer
                 application.state.session_factory = session_factory
                 application.state.conversations = ConversationService(

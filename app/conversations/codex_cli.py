@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from app import config
 from app.clinic.service import clinic_context
 from app.conversations.llm import AppointmentExtraction
+from app.conversations.prompts import PromptRegistry, ResolvedPrompt
 
 
 INTENT_SCHEMA = {
@@ -36,14 +37,21 @@ EXTRACTION_SCHEMA = {
 
 
 class CodexCliModel:
-    def __init__(self, tracer=None):
+    def __init__(self, tracer=None, prompt_registry=None):
         self.codex = shutil.which("codex")
         if not self.codex:
             raise RuntimeError("Codex CLI não encontrado no PATH")
         self.tracer = tracer
+        self.prompt_registry = prompt_registry
         self.model_name = config.CODEX_MODEL or "codex-cli-default"
 
-    def _call(self, operation: str, prompt: str, schema: dict | None = None):
+    def _prompts(self):
+        if self.prompt_registry is None:
+            self.prompt_registry = PromptRegistry(self.tracer.client if self.tracer else None)
+        return self.prompt_registry
+
+    def _call(self, operation: str, prompt: ResolvedPrompt, user_input: str,
+              schema: dict | None = None):
         with TemporaryDirectory(prefix="medagenda_codex_") as directory:
             path = Path(directory)
             answer_path = path / "answer.txt"
@@ -59,9 +67,13 @@ class CodexCliModel:
                 schema_path.write_text(json.dumps(schema), encoding="utf-8")
                 command.extend(["--output-schema", str(schema_path)])
             command.append("-")
-            span = (self.tracer.client.start_as_current_observation(
-                as_type="span", name=f"codex-cli-{operation}", metadata={"model": self.model_name}
-            ) if self.tracer else nullcontext())
+            kwargs = {
+                "as_type": "generation", "name": f"codex-cli-{operation}",
+                "model": self.model_name, "metadata": prompt.metadata,
+            }
+            if prompt.client_prompt is not None:
+                kwargs["prompt"] = prompt.client_prompt
+            span = self.tracer.client.start_as_current_observation(**kwargs) if self.tracer else nullcontext()
             # Keep application credentials out of the subprocess environment.
             child_env = os.environ.copy()
             for key in ("DATABASE_URL", "CHECKPOINT_DATABASE_URL", "LANGFUSE_PUBLIC_KEY",
@@ -69,9 +81,10 @@ class CodexCliModel:
                 child_env.pop(key, None)
             try:
                 with span:
-                    # shortcut: one CLI process per step; use an API provider when latency matters.
+                    # One CLI process per step; use an API provider when latency matters.
                     result = subprocess.run(
-                        command, input=prompt, text=True, encoding="utf-8", errors="replace",
+                        command, input=prompt.text + "\n" + user_input,
+                        text=True, encoding="utf-8", errors="replace",
                         capture_output=True, timeout=120, check=False, env=child_env,
                     )
             except subprocess.TimeoutExpired as exc:
@@ -83,38 +96,20 @@ class CodexCliModel:
 
     def classify(self, messages, config=None) -> str:
         history = "\n".join(f"{type(item).__name__}: {item.content}" for item in messages[-8:])
-        return self._call(
-            "classify",
-            "Classifique a intenção atual: agendamento, dúvida administrativa ou sintomas/pedido médico. "
-            "Se houver sintomas, use triage. Responda apenas no esquema solicitado.\n" + history,
-            INTENT_SCHEMA,
-        )["intent"]
+        prompt = self._prompts().resolve("classification")
+        return self._call("classify", prompt, history, INTENT_SCHEMA)["intent"]
 
     def extract(self, message: str, draft: dict, config=None) -> AppointmentExtraction:
         now = datetime.now(ZoneInfo("America/Sao_Paulo")).isoformat()
         context = {key: value for key, value in draft.items() if key not in ("cpf", "phone")}
-        result = self._call(
-            "extract",
-            f"Extraia apenas dados expressos nesta mensagem para agendamento. Agora: {now}. "
-            "Converta datas relativas somente se dia e hora forem explícitos. "
-            "Não invente campos ausentes. 'sim/confirmo' é yes; 'não/cancelar' é no. "
-            f"Dados já coletados (só contexto): {context}\nMensagem: {message}",
-            EXTRACTION_SCHEMA,
-        )
+        prompt = self._prompts().resolve("extraction", now=now, draft=str(context))
+        result = self._call("extract", prompt, "Mensagem: " + message, EXTRACTION_SCHEMA)
         return AppointmentExtraction.model_validate(result)
 
     def information(self, messages, session_factory, config=None) -> str:
-        return self._call(
-            "information",
-            "Responda brevemente em português somente com base nas informações abaixo. "
-            "Se faltar informação, sugira falar com a recepção.\n"
-            + clinic_context(session_factory) + "\nPergunta: " + str(messages[-1].content),
-        )
+        prompt = self._prompts().resolve("information", clinic_context=clinic_context(session_factory))
+        return self._call("information", prompt, "Pergunta: " + str(messages[-1].content))
 
     def triage(self, messages, config=None) -> str:
-        return self._call(
-            "triage",
-            "Não dê diagnóstico nem tratamento. Diga que a dúvida clínica precisa de avaliação médica "
-            "e pergunte se a pessoa deseja agendar uma consulta. Responda em português de forma breve.\n"
-            + str(messages[-1].content),
-        )
+        prompt = self._prompts().resolve("triage")
+        return self._call("triage", prompt, str(messages[-1].content))
